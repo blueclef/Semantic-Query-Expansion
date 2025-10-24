@@ -1,7 +1,7 @@
-
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import type { LiteraryExpansionResponse, Suggestion } from '../types';
 import { LoaderIcon } from './icons/LoaderIcon';
+import { generatePdf } from '../services/pdfService';
 
 interface ResultsDisplayProps {
   results: LiteraryExpansionResponse | null;
@@ -38,6 +38,48 @@ const ResultCategory: React.FC<{ title: string; suggestions: Suggestion[] }> = (
 };
 
 const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoading, error, isInitial }) => {
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const [isCopied, setIsCopied] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const formatResultsForCopy = (resultsData: LiteraryExpansionResponse): string => {
+    let text = `Literary Expressions for "${resultsData.query}"\n\n`;
+    const formatCategory = (title: string, suggestions: Suggestion[]) => {
+        if (!suggestions || suggestions.length === 0) return '';
+        let categoryText = `${title}\n`;
+        suggestions.forEach(s => {
+            categoryText += `- "${s.text}" (Score: ${(s.score * 100).toFixed(1)}%)\n`;
+        });
+        return categoryText + '\n';
+    };
+    text += formatCategory('Metaphors (은유법)', resultsData.metaphors);
+    text += formatCategory('Similes (직유법)', resultsData.similes);
+    text += formatCategory('Personifications (활유법)', resultsData.personifications);
+    return text.trim();
+  };
+  
+  const handleCopy = () => {
+    if (!results) return;
+    const textToCopy = formatResultsForCopy(results);
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2500);
+    });
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!resultsRef.current) return;
+    setIsDownloading(true);
+    try {
+      await generatePdf(resultsRef.current);
+    } catch (err) {
+      console.error("Failed to generate PDF:", err);
+      // Optionally, you could set an error state here to inform the user.
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   if (isInitial) {
     return (
         <div className="text-center py-10 px-6 bg-base-200 rounded-lg border border-dashed border-base-300">
@@ -83,11 +125,39 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ results, isLoading, err
   }
 
   return (
-    <div className="space-y-8">
-        <ResultCategory title="Metaphors (은유법)" suggestions={results.metaphors} />
-        <ResultCategory title="Similes (직유법)" suggestions={results.similes} />
-        <ResultCategory title="Personifications (활유법)" suggestions={results.personifications} />
-    </div>
+    <>
+      <div className="flex items-center justify-end gap-3 mb-4">
+          <button
+              onClick={handleCopy}
+              disabled={isCopied || isDownloading}
+              className="inline-flex items-center gap-2 rounded-md bg-base-300 px-4 py-2 text-sm font-semibold text-text-primary shadow-sm hover:bg-base-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary disabled:opacity-50 transition-colors"
+          >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              {isCopied ? 'Copied!' : 'Copy Text'}
+          </button>
+          <button
+              onClick={handleDownloadPdf}
+              disabled={isDownloading || isCopied}
+              className="inline-flex items-center gap-2 rounded-md bg-base-300 px-4 py-2 text-sm font-semibold text-text-primary shadow-sm hover:bg-base-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary disabled:opacity-50 transition-colors"
+          >
+              {isDownloading ? (
+                  <LoaderIcon className="h-4 w-4 animate-spin" />
+              ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+              )}
+              {isDownloading ? 'Saving...' : 'Save as PDF'}
+          </button>
+      </div>
+      <div ref={resultsRef} className="space-y-8">
+          <ResultCategory title="Metaphors (은유법)" suggestions={results.metaphors} />
+          <ResultCategory title="Similes (직유법)" suggestions={results.similes} />
+          <ResultCategory title="Personifications (활유법)" suggestions={results.personifications} />
+      </div>
+    </>
   );
 };
 
