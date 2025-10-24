@@ -1,0 +1,5 @@
+{
+  "name": "Semantic Query Expansion System",
+  "description": "A web interface to demonstrate a Semantic Query Expansion System. Enter a search query to receive a list of contextually relevant, semantically similar expansion queries ranked by a similarity score, powered by Gemini.",
+  "requestFramePermissions": []
+}
