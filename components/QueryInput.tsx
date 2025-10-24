@@ -25,9 +25,10 @@ const QueryInput: React.FC<QueryInputProps> = ({ onExpand, isLoading }) => {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="e.g., cheap flights"
+          placeholder="e.g., sadness, a busy city"
           disabled={isLoading}
-          className="w-full pl-11 pr-32 py-3 text-lg bg-base-200 border border-base-300 rounded-lg text-text-primary focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-150 ease-in-out disabled:opacity-50"
+          className="w-full h-[50px] pl-11 pr-32 py-3 text-lg bg-base-200 border border-base-300 rounded-lg text-text-primary focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-150 ease-in-out disabled:opacity-50"
+          aria-label="Enter a concept or phrase"
         />
         <div className="absolute inset-y-0 right-0 flex py-1.5 pr-1.5">
             <button
@@ -35,7 +36,7 @@ const QueryInput: React.FC<QueryInputProps> = ({ onExpand, isLoading }) => {
                 disabled={isLoading}
                 className="inline-flex items-center rounded-md bg-brand-primary px-6 py-2 text-base font-semibold text-white shadow-sm hover:bg-brand-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary disabled:bg-base-300 disabled:cursor-not-allowed transition-colors"
             >
-                {isLoading ? 'Expanding...' : 'Expand Query'}
+                {isLoading ? 'Generating...' : 'Generate'}
             </button>
         </div>
       </div>
