@@ -9,14 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.0",
     "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "@google/genai": "^1.27.0",
-    "jspdf": "latest",
-    "html2canvas": "1.4.1",
-    "@babel/runtime": "^7.24.7",
-    "fflate": "^0.8.2",
-    "fast-png": "^6.1.0"
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

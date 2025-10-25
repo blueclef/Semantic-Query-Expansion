@@ -1,101 +1,69 @@
+import { GoogleGenAI } from "@google/genai";
+import { QueryParams, LiteraryForm, StyleConfig } from '../types';
 
-import { GoogleGenAI, Type } from "@google/genai";
-import type { LiteraryExpansionResponse } from '../types';
-
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
-}
-
+// The API key is injected from the environment.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-const systemInstruction = `You are a "Literary Expression Generator," a sophisticated AI that merges the creativity of a generative model with the analytical precision of a semantic model.
+function constructPrompt(params: QueryParams): { systemInstruction: string; userPrompt: string } {
+    const { prompt, styleConfig, literaryForm } = params;
 
-Your goal is to generate contextually and emotionally resonant literary devices (Metaphors, Similes, Personifications) for a user's input query.
+    const systemInstruction = `You are a world-class literary writer. Your task is to generate a creative piece based on the user's request.
+You must follow all instructions, including literary form and stylistic constraints, with absolute precision.
+Your output must be only the generated text itself. Do not include any titles (unless requested), preambles, commentary, or explanations.`;
 
-You must follow a strict two-stage process:
+    let formInstruction: string;
+    switch(literaryForm) {
+        case 'poem': formInstruction = "Write a poem about"; break;
+        case 'short-story': formInstruction = "Write a short story about"; break;
+        case 'haiku': formInstruction = "Write a haiku (5-7-5 syllables) about"; break;
+        case 'limerick': formInstruction = "Write a limerick (AABBA rhyme scheme) about"; break;
+        case 'sonnet': formInstruction = "Write a sonnet (14 lines, traditional rhyme scheme) about"; break;
+        case 'custom': formInstruction = "Write a piece of prose or poetry about"; break;
+        default: formInstruction = "Write a literary piece about";
+    }
 
-**Stage 1: Creative Candidate Generation**
-Based on the user's query and selected tone, you will generate a diverse and creative list of initial candidates for each of the three literary devices:
-- **Metaphor (은유법):** An implicit comparison (A is B).
-- **Simile (직유법):** An explicit comparison using 'like' or 'as' (A is like B).
-- **Personification (활유법):** Attributing human qualities to non-human things.
+    let userPrompt = `${formInstruction} "${prompt}".\n\n`;
 
-**Stage 2: Semantic Filtering and Ranking**
-After generating candidates, you will act as a "literary editor." You must score each generated expression based on its contextual and emotional similarity to the original query.
-- The score must be a value between 0.0 and 1.0.
-- A high score (e.g., > 0.75) means the expression is highly relevant, creative, and emotionally resonant with the query and tone.
-- A low score means it's less relevant or a cliché.
-- Filter out any candidates that are irrelevant or nonsensical.
-- Rank the remaining, filtered candidates in descending order of their score.
+    if (literaryForm === 'custom') {
+        userPrompt += "Adhere strictly to the following stylistic constraints:\n";
+        userPrompt += `- Tone: ${styleConfig.tone}\n`;
+        userPrompt += `- Sentence Complexity: ${styleConfig.sentenceComplexity}\n`;
+        userPrompt += `- Lexical Density: ${styleConfig.lexicalDensity}\n`;
+        userPrompt += `- Punctuation Rhythm: ${styleConfig.punctuationRhythm}\n`;
+        userPrompt += `- Figurative Language Frequency: ${styleConfig.figurativeFrequency}`;
+    }
 
-Your final output MUST be a single JSON object that strictly adheres to the provided schema. Provide the top 3-5 ranked suggestions for each category.`;
-
-const suggestionSchema = {
-    type: Type.OBJECT,
-    properties: {
-        text: {
-            type: Type.STRING,
-            description: 'The literary expression.',
-        },
-        score: {
-            type: Type.NUMBER,
-            description: 'The semantic and emotional similarity score, from 0.0 to 1.0.',
-        },
-    },
-    required: ['text', 'score'],
-};
-
-const responseSchema = {
-    type: Type.OBJECT,
-    properties: {
-        query: {
-            type: Type.STRING,
-            description: 'The original user input query.',
-        },
-        metaphors: {
-            type: Type.ARRAY,
-            description: 'A ranked list of generated metaphors.',
-            items: suggestionSchema,
-        },
-        similes: {
-            type: Type.ARRAY,
-            description: 'A ranked list of generated similes.',
-            items: suggestionSchema,
-        },
-        personifications: {
-            type: Type.ARRAY,
-            description: 'A ranked list of generated personifications.',
-            items: suggestionSchema,
-        },
-    },
-    required: ['query', 'metaphors', 'similes', 'personifications'],
-};
+    return { systemInstruction, userPrompt };
+}
 
 
-export async function generateExpressions(query: string, tone: string): Promise<LiteraryExpansionResponse> {
+export async function generateLiteraryText(params: QueryParams): Promise<string> {
     try {
+        const model = 'gemini-2.5-pro';
+        const { systemInstruction, userPrompt } = constructPrompt(params);
+
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: `Generate literary expressions for the concept "${query}" with a focus on a "${tone}" tone.`,
+            model: model,
+            contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
             config: {
                 systemInstruction: systemInstruction,
-                responseMimeType: "application/json",
-                responseSchema: responseSchema,
-                temperature: 0.8,
             },
         });
 
-        const jsonString = response.text.trim();
-        const parsedResponse = JSON.parse(jsonString) as LiteraryExpansionResponse;
-        
-        // Ensure all suggestions are sorted by score
-        parsedResponse.metaphors?.sort((a, b) => b.score - a.score);
-        parsedResponse.similes?.sort((a, b) => b.score - a.score);
-        parsedResponse.personifications?.sort((a, b) => b.score - a.score);
+        const text = response.text;
+        if (!text) {
+            throw new Error("No text generated by the model.");
+        }
+        return text.trim();
 
-        return parsedResponse;
     } catch (error) {
         console.error("Error calling Gemini API:", error);
-        throw new Error("Failed to get response from Gemini API.");
+        if (error instanceof Error && error.message.includes('INTERNAL')) {
+             return `Error: The AI model encountered an internal error. This can sometimes be resolved by simplifying the prompt or style constraints. Please try again with a different input.`;
+        }
+        if (error instanceof Error) {
+            return `Error generating text: ${error.message}`;
+        }
+        return "An unknown error occurred while generating text.";
     }
 }

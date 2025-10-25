@@ -1,18 +1,38 @@
+export type FontStyle = 'serif' | 'sans-serif' | 'monospace';
+export type Alignment = 'left' | 'center' | 'right';
 
-export interface Suggestion {
-  text: string;
-  score: number;
+export interface StyleOptions {
+    font: FontStyle;
+    alignment: Alignment;
 }
 
-export interface LiteraryExpansionResponse {
-  query: string;
+export type SentenceComplexity = 'low' | 'medium' | 'high';
+export type LexicalDensity = 'high-noun-verb' | 'balanced' | 'high-adj-adv';
+export type PunctuationRhythm = 'low-comma' | 'medium-comma' | 'high-comma';
+export type FigurativeFrequency = 'low' | 'medium' | 'high';
 
-  /** A list of generated metaphors. */
-  metaphors: Suggestion[];
+export interface StyleConfig {
+    sentenceComplexity: SentenceComplexity;
+    lexicalDensity: LexicalDensity;
+    punctuationRhythm: PunctuationRhythm;
+    figurativeFrequency: FigurativeFrequency;
+    tone: string;
+}
 
-  /** A list of generated similes. */
-  similes: Suggestion[];
+export interface StylePreset {
+    name: string;
+    config: StyleConfig;
+}
 
-  /** A list of generated personifications. */
-  personifications: Suggestion[];
+export interface ResultState {
+    text: string;
+    styleOptions: StyleOptions;
+}
+
+export type LiteraryForm = 'poem' | 'short-story' | 'haiku' | 'limerick' | 'sonnet' | 'custom';
+
+export interface QueryParams {
+    prompt: string;
+    styleConfig: StyleConfig;
+    literaryForm: LiteraryForm;
 }
